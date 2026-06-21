@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: phuzz-db
+    command: --general-log=1 --general-log-file=/var/log/mysql/general.log
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: silent_phuzz_db
+      MYSQL_USER: phuzz_user
+      MYSQL_PASSWORD: phuzz_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-log:/var/log/mysql
+      - ./db/install_schema.sql:/docker-entrypoint-initdb.d/install_schema.sql
+    restart: always
+
+  web:
+    build: .
+    container_name: phuzz-php
+    volumes:
+      - ./src:/var/www/html
+      - ./mysql-log:/var/log/mysql:ro
+    depends_on:
+      - db
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: phuzz-nginx
+    ports:
+      - "8888:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  mysql-data:
