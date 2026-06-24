@@ -21,9 +21,17 @@ services:
   web:
     build: .
     container_name: phuzz-php
+    entrypoint: ["bash", "-c", "mkdir -p /shared-tmpfs/{coverage-reports,exception-reports,error-reports,mysql-error-reports,shell-error-reports,unserialize-error-reports,pathtraversal-error-reports,xxe-error-reports} && find /var/www/html > /shared-tmpfs/web-paths.txt && chmod -R 777 /shared-tmpfs && exec docker-php-entrypoint php-fpm"]
+
+    environment:
+      FUZZER_COMPRESS: 1
+      FUZZER_COVERAGE_PATH: /var/www/html/
+
     volumes:
       - ./src:/var/www/html
       - ./mysql-log:/var/log/mysql:ro
+      - shared-tmpfs:/shared-tmpfs
+      - ./instrumentation:/var/www/fuzzer:ro
     depends_on:
       - db
     restart: always
@@ -40,5 +48,173 @@ services:
       - web
     restart: always
 
+  # Case 1 Bypass (hargen_0002)
+  fuzzer-hargen-0002-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-2
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 2
+      FUZZER_CONFIG: webapp/hargen_0002
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0002:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
+  # Case 2 Bypass (hargen_0004)
+  fuzzer-hargen-0004-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-4
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 4
+      FUZZER_CONFIG: webapp/hargen_0004
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0004:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
+  # Case 3 Bypass (hargen_0006)
+  fuzzer-hargen-0006-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-6
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 6
+      FUZZER_CONFIG: webapp/hargen_0006
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0006:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
+  # Case 4 Bypass (hargen_0008)
+  fuzzer-hargen-0008-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-8
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 8
+      FUZZER_CONFIG: webapp/hargen_0008
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0008:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
+  # Case 5 Bypass (hargen_0010)
+  fuzzer-hargen-0010-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-10
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 10
+      FUZZER_CONFIG: webapp/hargen_0010
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0010:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
+  # Case 6 Bypass (hargen_0012)
+  fuzzer-hargen-0012-1:
+    build:
+      context: ../silent_phuzz/silent-phuzz/code/fuzzer
+      dockerfile: Dockerfile
+    container_name: fuzzer-instance-12
+    environment:
+      PYTHONUNBUFFERED: 1
+      FUZZER_NODE_ID: 12
+      FUZZER_CONFIG: webapp/hargen_0012
+      FUZZER_CLEANUP: 1
+      FUZZER_COMPRESS: 1
+    volumes:
+      - ../silent_phuzz/silent-phuzz/code/fuzzer:/app
+      - ../silent_phuzz/silent-phuzz/code/configs:/app/configs
+      - shared-tmpfs:/shared-tmpfs
+      - sync-tmpfs-hargen_0012:/sync-tmpfs
+    depends_on:
+      - nginx
+    restart: always
+
 volumes:
   mysql-data:
+  shared-tmpfs:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0002:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0004:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0006:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0008:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0010:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"
+  sync-tmpfs-hargen_0012:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+      o: "size=1024m,uid=1000"

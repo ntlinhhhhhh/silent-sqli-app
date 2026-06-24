@@ -58,8 +58,22 @@ if (isset($_GET['api'])) {
             if (file_exists($log_path) && is_readable($log_path)) {
                 $lines = file($log_path);
                 if ($lines) {
-                    // Extract last 25 lines
-                    $log_lines = array_slice($lines, -25);
+                    // Filter out internal sensor status monitoring queries from the log display
+                    $filtered_lines = [];
+                    foreach ($lines as $line) {
+                        $lower_line = strtolower($line);
+                        if (strpos($lower_line, '__phuzz_probe') !== false ||
+                            strpos($lower_line, '__phuzz_update_sensor') !== false ||
+                            strpos($lower_line, 'phuzz_sensor') !== false ||
+                            strpos($lower_line, 'users order by id desc limit 5') !== false ||
+                            strpos($lower_line, 'orders order by id desc limit 5') !== false ||
+                            strpos($lower_line, 'api=sensor_status') !== false) {
+                            continue;
+                        }
+                        $filtered_lines[] = $line;
+                    }
+                    // Extract last 25 lines of clean logs
+                    $log_lines = array_slice($filtered_lines, -25);
                 } else {
                     $log_lines = ["[Empty Log] Database is running but no queries executed yet."];
                 }
@@ -222,7 +236,46 @@ if (isset($_GET['api'])) {
 
         .header-actions {
             display: flex;
+            align-items: center;
             gap: 1rem;
+        }
+
+        .auto-refresh-container {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .auto-refresh-container input {
+            cursor: pointer;
+            accent-color: var(--accent-primary);
+        }
+
+        button.btn-refresh {
+            background: rgba(59, 130, 246, 0.1);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        button.btn-refresh:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #fff;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
         }
 
         button.btn-reset {
@@ -786,8 +839,16 @@ if (isset($_GET['api'])) {
             <div class="logo-badge">WAF vs Fuzzer</div>
         </div>
         <div class="header-actions">
-            <button class="btn-reset" onclick="resetDatabase()" title="Restore DB schemas and seeds">
+            <label class="auto-refresh-container" title="Check to poll database sensors and query logs dynamically every 3 seconds">
+                <input type="checkbox" id="chk-auto-refresh">
+                Auto Refresh (3s)
+            </label>
+            <button class="btn-refresh" onclick="fetchSensorStatus()" title="Refresh Sensors and Logs Now">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Refresh
+            </button>
+            <button class="btn-reset" onclick="resetDatabase()" title="Restore DB schemas and seeds">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 Reset Database
             </button>
         </div>
@@ -1340,9 +1401,26 @@ $pdo->query($sql);`
         window.addEventListener('load', () => {
             selectCase('1');
             fetchSensorStatus();
-            // Poll every 3 seconds to keep DB sensors and Logs updated
-            setInterval(fetchSensorStatus, 3000);
+            // Poll every 3 seconds to keep DB sensors and Logs updated if auto-refresh is checked
+            setInterval(() => {
+                const chk = document.getElementById('chk-auto-refresh');
+                if (chk && chk.checked) {
+                    fetchSensorStatus();
+                }
+            }, 3000);
         });
     </script>
+
+    <!-- HIDDEN SITEMAP FOR AUTOMATED WEB FUZZERS (PHUZZ, SQLMAP, SPIDERS) -->
+    <div style="display: none;" aria-hidden="true">
+        <h2>Sitemap for Crawlers</h2>
+        <a href="index.php?case=1&username=test_user">Case 1: Balanced Quote</a>
+        <a href="index.php?case=2&id=100">Case 2: Error-Pattern Regex</a>
+        <a href="index.php?case=3&category_id=5">Case 3: Type Casting</a>
+        <a href="index.php?case=4&order_id=ORD-999">Case 4: Custom Sanitizer</a>
+        <a href="index.php?case=5a&username=second_order_test">Case 5a: Store Second-Order</a>
+        <a href="index.php?case=5b">Case 5b: Trigger Second-Order</a>
+        <a href="index.php?case=6&sort=price">Case 6: Semantic Order By</a>
+    </div>
 </body>
 </html>
