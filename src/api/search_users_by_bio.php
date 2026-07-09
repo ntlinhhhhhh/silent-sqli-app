@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/database.php';
 
 try {
     // 1. Retrieve the latest registered user (which could contain our stored payload)
-    $stmt = $pdo->query("SELECT id, username FROM users ORDER BY id DESC LIMIT 1");
+    $stmt = $pdo->query("SELECT id, username, bio FROM users ORDER BY id DESC LIMIT 1");
     $latest_user = $stmt->fetch();
 
     if (!$latest_user) {
@@ -15,32 +15,33 @@ try {
         exit;
     }
 
-    $username_from_db = $latest_user['username'];
+    $bio_from_db = $latest_user['bio'] ?? '';
 
-    // 2. Vulnerability (Endpoint B): Direct string concatenation from database value
-    $sql = "SELECT id, username, role FROM users WHERE username = '" . $username_from_db . "'";
+    // 2. VULNERABLE (Endpoint B): SQL Query executed using raw string concatenation via LIKE
+    $sql = "SELECT id, username, role, bio FROM users WHERE bio LIKE '%$bio_from_db%'";
     
-    // Execute query (multi statements support enabled in database.php)
+    // Execute query insecurely
     $trigger_stmt = $pdo->query($sql);
     $results = [];
     
     if ($trigger_stmt) {
         $results = $trigger_stmt->fetchAll();
-        $trigger_stmt->closeCursor();
     }
 
     echo json_encode([
         "status" => "success",
-        "message" => "Second-order report query triggered successfully.",
-        "retrieved_username" => $username_from_db,
+        "message" => "Second-order search query triggered using retrieved bio.",
+        "retrieved_bio" => $bio_from_db,
         "executed_sql" => $sql,
         "results_count" => count($results)
     ]);
 } catch (\PDOException $e) {
-    http_response_code(500);
+    // Suppress SQL errors to hide them from Error-based fuzzers (Fuzzer 1)
+    // We return HTTP 200 OK and a generic success response instead of HTTP 500
+    http_response_code(200);
     echo json_encode([
-        "status" => "db_error",
-        "message" => $e->getMessage(),
-        "executed_sql" => $sql ?? null
+        "status" => "success",
+        "message" => "Second-order search query processed.",
+        "results_count" => 0
     ]);
 }
