@@ -21,5 +21,15 @@ $options = [
 try {
      $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-     throw new \PDOException($e->getMessage(), (int)$e->getCode());
+     // Log the actual error for backend debugging
+     error_log("Database connection error: " . $e->getMessage());
+
+     // Return generic JSON response and terminate immediately
+     http_response_code(500);
+     header('Content-Type: application/json');
+     echo json_encode([
+         "status" => "error",
+         "message" => "Request failed to process."
+     ]);
+     exit;
 }
